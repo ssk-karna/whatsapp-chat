@@ -11,8 +11,13 @@ import android.widget.EditText;
 
 import com.example.whatsappchat.Chat.MessageAdapter;
 import com.example.whatsappchat.Chat.MessageObject;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 public class ChatActivity extends AppCompatActivity {
 
@@ -20,12 +25,16 @@ public class ChatActivity extends AppCompatActivity {
     private RecyclerView.Adapter mChatAdapter;
     private RecyclerView.LayoutManager mChatLayoutManager;
     private ArrayList<MessageObject> messageList;
+    String chatID;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_chat);
         Button mSend = findViewById(R.id.send);
+
+        chatID = getIntent().getExtras().getString("chatID");
+
         mSend.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -40,8 +49,15 @@ public class ChatActivity extends AppCompatActivity {
         EditText mMessage = findViewById(R.id.message);
 
         if(!mMessage.getText().toString().isEmpty()){
+            DatabaseReference newMessageDb = FirebaseDatabase.getInstance().getReference().child("chat").child(chatID).push();
 
+            Map newMessageMap = new HashMap<>();
+            newMessageMap.put("text",mMessage.getText().toString());
+            newMessageMap.put("creator", FirebaseAuth.getInstance().getUid());
+
+            newMessageDb.updateChildren(newMessageMap);
         }
+        mMessage.setText(null);
     }
 
     private void initializeRecyclerView() {
