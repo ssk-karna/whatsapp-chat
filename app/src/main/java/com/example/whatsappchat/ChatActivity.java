@@ -1,5 +1,7 @@
 package com.example.whatsappchat;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -12,6 +14,9 @@ import android.widget.EditText;
 import com.example.whatsappchat.Chat.MessageAdapter;
 import com.example.whatsappchat.Chat.MessageObject;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.ChildEventListener;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
@@ -26,6 +31,7 @@ public class ChatActivity extends AppCompatActivity {
     private RecyclerView.LayoutManager mChatLayoutManager;
     private ArrayList<MessageObject> messageList;
     String chatID;
+    DatabaseReference mChatDb;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,14 +48,64 @@ public class ChatActivity extends AppCompatActivity {
             }
         });
 
-        initializeRecyclerView();;
+        mChatDb = FirebaseDatabase.getInstance().getReference().child("chat").child(chatID);
+
+        initializeRecyclerView();
+        getChatMessages();
+    }
+
+    private void getChatMessages() {
+
+        mChatDb.addChildEventListener(new ChildEventListener() {
+            @Override
+            public void onChildAdded(@NonNull DataSnapshot snapshot, @Nullable String previousChildName) {
+
+                if(snapshot.exists()){
+                    String text = "";
+                    String creatorID = "";
+
+                    if(snapshot.child("text").getValue() != null)
+                        text = snapshot.child("text").getValue().toString();
+                    if(snapshot.child("creator").getValue() != null)
+                        creatorID = snapshot.child("creator").getValue().toString();
+
+                    MessageObject mMessage = new MessageObject(snapshot.getKey(),creatorID,text);
+                    messageList.add(mMessage);
+                    mChatLayoutManager.scrollToPosition(messageList.size()-1);
+                    mChatAdapter.notifyDataSetChanged();
+
+                }
+
+            }
+
+            @Override
+            public void onChildChanged(@NonNull DataSnapshot snapshot, @Nullable String previousChildName) {
+
+            }
+
+            @Override
+            public void onChildRemoved(@NonNull DataSnapshot snapshot) {
+
+            }
+
+            @Override
+            public void onChildMoved(@NonNull DataSnapshot snapshot, @Nullable String previousChildName) {
+
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+
+            }
+        });
+
     }
 
     private void sendMessage() {
         EditText mMessage = findViewById(R.id.message);
 
         if(!mMessage.getText().toString().isEmpty()){
-            DatabaseReference newMessageDb = FirebaseDatabase.getInstance().getReference().child("chat").child(chatID).push();
+            DatabaseReference newMessageDb = mChatDb.push();
 
             Map newMessageMap = new HashMap<>();
             newMessageMap.put("text",mMessage.getText().toString());
